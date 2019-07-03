@@ -91,15 +91,15 @@ namespace MediaInfoTest
             int count = 0;
             Dictionary<string, Stats> stats = new Dictionary<string, Stats>();
             var files = dir.GetFiles("*.*", SearchOption.AllDirectories);
-            var filteredFiles = files.Where(x => extensions.Contains(x.Extension)).ToList();
-            var skipped_extensions = files.Where(x => !extensions.Contains(x.Extension)).Select(x => x.Extension).Distinct().ToList();
+            var filteredFiles = files.Where(x => extensions.Contains(x.Extension.ToLowerInvariant())).ToList();
+            var skipped_extensions = files.Where(x => !extensions.Contains(x.Extension.ToLowerInvariant())).Select(x => x.Extension).Distinct().ToList();
             var failures = new List<Failure>();
             int total_files = filteredFiles.Count;
             foreach (FileInfo file in filteredFiles)
             {
-                if (!stats.ContainsKey(file.Extension))
+                if (!stats.ContainsKey(file.Extension.ToLowerInvariant()))
                 {
-                    stats.Add(file.Extension, new Stats());
+                    stats.Add(file.Extension.ToLowerInvariant(), new Stats());
                 }
                 if (file.Exists)
                 {
@@ -123,9 +123,9 @@ namespace MediaInfoTest
 
                     //}                    
                     inner_sw.Stop();
-                    stats[file.Extension].TimeMediaInfo += inner_sw.Elapsed;
+                    stats[file.Extension.ToLowerInvariant()].TimeMediaInfo += inner_sw.Elapsed;
                     count++;
-                    stats[file.Extension].Count++;
+                    stats[file.Extension.ToLowerInvariant()].Count++;
                     Console.Write(" -> MediaInfo Done (v{0}:a{1}:s{2});", info.VideoStreams.Count, info.AudioStreams.Count, info.Subtitles.Count);
                     inner_sw.Restart();
                     var process = new ProcessOptions();
@@ -151,7 +151,7 @@ namespace MediaInfoTest
                     }
                     commonProcess.WaitForExit(1000);
                     inner_sw.Stop();
-                    stats[file.Extension].TimeFFProbe += inner_sw.Elapsed;
+                    stats[file.Extension.ToLowerInvariant()].TimeFFProbe += inner_sw.Elapsed;
                     int videostreams = info_ff.streams.Where(x => x.codec_type == "video" && x.disposition["attached_pic"] == "0").Count();
                     int audiostreams = info_ff.streams.Where(x => x.codec_type == "audio").Count();
                     int substreams = info_ff.streams.Where(x => x.codec_type == "subtitle").Count();
