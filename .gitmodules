@@ -1,0 +1,3 @@
+[submodule "MP-MediaInfo"]
+	path = MP-MediaInfo
+	url = https://github.com/EraYaN/MP-MediaInfo
