@@ -3,7 +3,7 @@
 
 This is a test of MediaInfo performance vs ffprobe performance.
 
-##Usage
+## Usage
 
 ```
 MediaInfoTest -image DIR
