@@ -8,7 +8,7 @@ This is a test of MediaInfo performance vs ffprobe performance.
 ```
 MediaInfoTest -image DIR
 ```
-For all images.
+For all images. (This one is bugged for now)
 ```
 MediaInfoTest -av DIR
 ```

@@ -81,7 +81,7 @@ namespace MediaInfoTest
         {
             if (args.Length != 2)
             {
-                Console.WriteLine("Usage: MediaInfoTest -images <directory>");
+                Console.WriteLine("Usage (this one is bugged for now): MediaInfoTest -images <directory>");
                 Console.WriteLine("Benchmark grabbing media info for all image files in this directory and subdirectories.");
                 Console.WriteLine("Usage: MediaInfoTest -av <directory>");
                 Console.WriteLine("Benchmark grabbing media info for all audio and video files in this directory and subdirectories.");
