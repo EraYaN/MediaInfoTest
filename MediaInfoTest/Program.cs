@@ -11,47 +11,6 @@ using MediaBrowser.Model.Diagnostics;
 using Emby.Server.Implementations.Diagnostics;
 using System.Reflection;
 
-/*
- * Reference:
- * 
-Media Info
-Video
-Title1080p H264
-CodecH264
-AVCYes
-ProfileHigh
-Level41
-Resolution1920x1080
-Aspect ratio16:9
-AnamorphicNo
-InterlacedNo
-Framerate23.976
-Bitrate35,378 kbps
-Bit depth8 bit
-Pixel formatyuv420p
-Ref frames1
-NAL4
-Audio
-TitleJapanese PCM_S24BE 2 ch (Default)
-LanguageJapanese
-CodecPCM_S24BE
-Channels2 ch
-Bitrate2,304 kbps
-Sample rate48,000 Hz
-Bit depth24 bit
-DefaultYes
-Subtitle
-TitleUnd (ASS)
-CodecASS
-DefaultNo
-ForcedNo
-ExternalYes
-Containermkv
-PathM:\Music Videos\BABYMETAL\BABYMETAL - LIVE - Legend 1999 & 1997 Apocalypse\2. LEGEND “1997“ SU-METAL Sentaisai at Makuhari Messe Event Hall.mkv
-Size20851 MB
-
- * */
-
 namespace MediaInfoTest
 {
     public class Stats
