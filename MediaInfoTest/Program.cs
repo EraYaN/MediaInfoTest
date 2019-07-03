@@ -67,12 +67,19 @@ namespace MediaInfoTest
         }
     }
 
+    public class Failure
+    {
+        public FileInfo file;
+        public MediaInfoWrapper mediainfo;
+        public InternalMediaInfoResult ffprobe;
+    }
+
 
     class Program
     {
         static void Main(string[] args)
         {
-            if(args.Length != 2)
+            if (args.Length != 2)
             {
                 Console.WriteLine("Usage: MediaInfoTest -images <directory>");
                 Console.WriteLine("Benchmark grabbing media info for all image files in this directory and subdirectories.");
@@ -84,15 +91,17 @@ namespace MediaInfoTest
 
             string mode = "av";
 
-            if(args[0] == "-images")
+            if (args[0] == "-images")
             {
                 Console.WriteLine("Filtering for image files.");
                 mode = "img";
-            } else if (args[0] == "-av")
+            }
+            else if (args[0] == "-av")
             {
                 Console.WriteLine("Filtering for audio and video files.");
                 mode = "av";
-            } else
+            }
+            else
             {
                 Console.WriteLine("Did not understand first argument");
                 Environment.Exit(2);
@@ -100,7 +109,8 @@ namespace MediaInfoTest
 
             List<string> extensions = new List<string>();
             using (Stream stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(string.Format("MediaInfoTest.extensions-{0}.txt", mode)))
-            using (StreamReader reader = new StreamReader(stream)) {
+            using (StreamReader reader = new StreamReader(stream))
+            {
                 while (!reader.EndOfStream)
                 {
                     var extension = "." + reader.ReadLine();
@@ -119,11 +129,12 @@ namespace MediaInfoTest
 
             Stopwatch sw = Stopwatch.StartNew();
             Stopwatch inner_sw = new Stopwatch();
-            int count = 0;            
+            int count = 0;
             Dictionary<string, Stats> stats = new Dictionary<string, Stats>();
             var files = dir.GetFiles("*.*", SearchOption.AllDirectories);
             var filteredFiles = files.Where(x => extensions.Contains(x.Extension)).ToList();
-            var skipped_extensions = files.Where(x => !extensions.Contains(x.Extension)).Select(x=>x.Extension).Distinct().ToList();
+            var skipped_extensions = files.Where(x => !extensions.Contains(x.Extension)).Select(x => x.Extension).Distinct().ToList();
+            var failures = new List<Failure>();
             int total_files = filteredFiles.Count;
             foreach (FileInfo file in filteredFiles)
             {
@@ -133,7 +144,7 @@ namespace MediaInfoTest
                 }
                 if (file.Exists)
                 {
-                    Console.Write("{1} of {2}: {0}", file.Name, count+1, total_files);
+                    Console.Write("{1} of {2}: {0}", file.Name, count + 1, total_files);
                     inner_sw.Restart();
                     MediaInfoWrapper info = new MediaInfoWrapper(file.FullName /*, _logger*/);
                     //foreach (VideoStream stream in info.VideoStreams)
@@ -156,33 +167,44 @@ namespace MediaInfoTest
                     stats[file.Extension].TimeMediaInfo += inner_sw.Elapsed;
                     count++;
                     stats[file.Extension].Count++;
-                    Console.Write(" -> MediaInfo Done;");
+                    Console.Write(" -> MediaInfo Done (v{0}:a{1}:s{2});", info.VideoStreams.Count, info.AudioStreams.Count, info.Subtitles.Count);
                     inner_sw.Restart();
                     var process = new ProcessOptions();
                     // Configure the process using the StartInfo properties.
                     process.FileName = @"ffprobe";
                     process.UseShellExecute = false;
                     process.RedirectStandardOutput = true;
-                    process.Arguments = string.Format("-analyzeduration 3000000 -i \"{0}\" -threads 0 -v error -print_format json -show_streams -show_chapters -show_format", file.FullName.Replace("\"", "\\\""));
+                    process.Arguments = string.Format("-analyzeduration 3000000 -i \"{0}\" -threads 0 -v warning -print_format json -show_streams -show_chapters -show_format", file.FullName.Replace("\"", "\\\""));
                     process.IsHidden = true;
                     process.ErrorDialog = false;
                     process.EnableRaisingEvents = true;
-                    //process.WindowStyle = ProcessWindowStyle.Maximized;
                     var commonProcess = new CommonProcess(process);
                     commonProcess.Start();
+                    InternalMediaInfoResult info_ff = new InternalMediaInfoResult();
                     try
                     {
-                        var info_ff = JsonSerializer.DeserializeFromStream<InternalMediaInfoResult>(commonProcess.StandardOutput.BaseStream);
+                        info_ff = JsonSerializer.DeserializeFromStream<InternalMediaInfoResult>(commonProcess.StandardOutput.BaseStream);
                     }
                     catch
                     {
                         commonProcess.Kill();
                         Console.Write(" -> Failed...");
                     }
-
+                    commonProcess.WaitForExit(1000);
                     inner_sw.Stop();
                     stats[file.Extension].TimeFFProbe += inner_sw.Elapsed;
-                    Console.WriteLine(" -> FFProbe Done.");
+                    int videostreams = info_ff.streams.Where(x => x.codec_type == "video" && x.disposition["attached_pic"] == "0").Count();
+                    int audiostreams = info_ff.streams.Where(x => x.codec_type == "audio").Count();
+                    int substreams = info_ff.streams.Where(x => x.codec_type == "subtitle").Count();
+                    Console.WriteLine(" -> FFProbe Done (v{0}:a{1}:s{2}).", videostreams, audiostreams, substreams);
+
+
+                    if (videostreams != info.VideoStreams.Count || audiostreams != info.AudioStreams.Count || substreams != info.Subtitles.Count)
+                    {
+                        Console.WriteLine("FFProbe and MediaInfo do not agree on the number of streams!", videostreams, audiostreams, substreams);
+                        failures.Add(new Failure() { file = file, mediainfo = info, ffprobe = info_ff });
+                    }
+
                 }
                 else
                 {
@@ -201,6 +223,15 @@ namespace MediaInfoTest
             foreach (var me in skipped_extensions)
             {
                 Console.WriteLine(string.Format("Skipped Extension: {0}", me));
+            }
+            foreach (var failure in failures)
+            {
+                Console.WriteLine(string.Format("Failure: Name: {0}; Streams MI: v{1}:a{2}:s{3}; Streams FF: v{4}:a{5}:s{6};", failure.file.FullName,
+                     failure.mediainfo.VideoStreams.Count, failure.mediainfo.AudioStreams.Count, failure.mediainfo.Subtitles.Count,
+                     failure.ffprobe.streams.Where(x => x.codec_type == "video" && x.disposition["attached_pic"] == "0").Count(),
+                     failure.ffprobe.streams.Where(x => x.codec_type == "audio").Count(),
+                     failure.ffprobe.streams.Where(x => x.codec_type == "subtitle").Count()
+                    ));
             }
         }
     }
